@@ -1,25 +1,15 @@
-<?php    
-// All project functions should be placed here
+<?php
+$servername = "localhost"; // Default server for local development
+$username = "root";       // Default username for phpMyAdmin
+$password = "";           // Default password (leave empty for XAMPP/WAMP)
+$dbname = "dct-ccs-finals"; // Replace with your database name
 
-// Database configuration
-define('DB_HOST', 'localhost'); // Usually localhost
-define('DB_USER', 'your_username'); // Your database username
-define('DB_PASS', 'your_password'); // Your database password
-define('DB_NAME', 'dct-ccs-finals'); // Your database name
+// Create a new MySQLi connection
+$conn = new mysqli($servername, $username, $password, $dbname);
 
-// Create connection
-function dbConnect() {
-    $connection = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-
-    // Check connection
-    if ($connection->connect_error) {
-        die("Connection failed: " . $connection->connect_error);
-    }
-    return $connection;
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
 }
-
-// Example of a function to close the connection
-function closeConnection($connection) {
-    $connection->close();
-}
+echo "Database connected successfully!";
 ?>
