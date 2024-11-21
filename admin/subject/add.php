@@ -122,7 +122,6 @@ if ($result) {
                                             <td>
                                                 <a href="edit.php?id=<?php echo $subject['id']; ?>" class="btn btn-info btn-sm">Edit</a>
                                                 <a href="delete.php?id=<?php echo $subject['id']; ?>" class="btn btn-danger btn-sm">Delete</a>
-                                                <a href="../student/attach-subject.php?id=<?php echo $subject['id']; ?>" class="btn btn-warning btn-sm">Attach Subject</a>
                                             </td>
                                         </tr>
                                     <?php } ?>

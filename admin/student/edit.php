@@ -22,19 +22,34 @@ if (isset($_GET['id'])) {
 
 // Handle the form submission for updating student details
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_student'])) {
+    $new_student_id = $_POST['student_id'];
     $first_name = $_POST['first_name'];
     $last_name = $_POST['last_name'];
 
-    if (!empty($first_name) && !empty($last_name)) {
-        $update_query = "UPDATE students SET first_name = ?, last_name = ? WHERE id = ?";
-        $stmt = $conn->prepare($update_query);
-        $stmt->bind_param("ssi", $first_name, $last_name, $student_id);
+    // Validate the student ID, first name, and last name
+    if (!empty($new_student_id) && !empty($first_name) && !empty($last_name)) {
+        // Check if the new student ID already exists (excluding the current student)
+        $check_query = "SELECT * FROM students WHERE student_id = ? AND id != ?";
+        $stmt = $conn->prepare($check_query);
+        $stmt->bind_param("si", $new_student_id, $student_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
 
-        if ($stmt->execute()) {
-            header("Location: register.php?success=Student updated successfully");
-            exit;
+        if ($result->num_rows > 0) {
+            // Student ID already exists
+            $error_message = "Student ID already exists. Please use a unique ID.";
         } else {
-            $error_message = "Error updating student: " . $conn->error;
+            // Update the student details
+            $update_query = "UPDATE students SET student_id = ?, first_name = ?, last_name = ? WHERE id = ?";
+            $stmt = $conn->prepare($update_query);
+            $stmt->bind_param("sssi", $new_student_id, $first_name, $last_name, $student_id);
+
+            if ($stmt->execute()) {
+                header("Location: register.php?success=Student updated successfully");
+                exit;
+            } else {
+                $error_message = "Error updating student: " . $conn->error;
+            }
         }
     } else {
         $error_message = "All fields are required.";
@@ -77,6 +92,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_student'])) {
                             <div class="alert alert-danger"><?php echo $error_message; ?></div>
                         <?php } ?>
                         <form method="POST">
+                            <div class="mb-3">
+                                <label for="student_id" class="form-label">Student ID</label>
+                                <input type="text" name="student_id" id="student_id" class="form-control" value="<?php echo htmlspecialchars($student['student_id']); ?>" required>
+                            </div>
                             <div class="mb-3">
                                 <label for="first_name" class="form-label">First Name</label>
                                 <input type="text" name="first_name" id="first_name" class="form-control" value="<?php echo htmlspecialchars($student['first_name']); ?>" required>
