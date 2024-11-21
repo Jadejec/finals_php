@@ -113,6 +113,11 @@ if ($result) {
                                             <td>
                                                 <a href="edit.php?id=<?php echo $subject['id']; ?>" class="btn btn-info btn-sm">Edit</a>
                                                 <a href="delete.php?id=<?php echo $subject['id']; ?>" class="btn btn-danger btn-sm">Delete</a>
+                                                <!-- Add Attach Subject button -->
+                                                <a href="../student/attach-subject.php?id=<?php echo $subject['id']; ?>" class="btn btn-success btn-sm">Attach Subject</a>
+
+
+
                                             </td>
                                         </tr>
                                     <?php } ?>
@@ -131,6 +136,5 @@ if ($result) {
 </body>
 
 </html>
-
 
 <?php include('../partials/footer.php'); ?>
