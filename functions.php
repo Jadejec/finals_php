@@ -1,4 +1,9 @@
 <?php
+session_start();
+$email = "";
+$password = "";
+$errors = array();
+
 $servername = "localhost"; // Default server for local development
 $username = "root";       // Default username for phpMyAdmin
 $password = "";           // Default password (leave empty for XAMPP/WAMP)
@@ -11,5 +16,38 @@ $conn = new mysqli($servername, $username, $password, $dbname);
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
-echo "Database connected successfully!";
+
+//Login user
+if (isset($_POST['login_user'])) {
+    $email = mysqli_real_escape_string($conn, $_POST['email']);
+    $password = mysqli_real_escape_string($conn, $_POST['password']);
+
+    // Initialize an array for error messages
+    $errors = [];
+    if (empty($email)) {
+        $errors[] = "Email is required.";
+    }
+
+    if (empty($password)) {
+        $errors[] = "Password is required.";
+    }
+
+
+    if (count($errors) == 0) {
+        // Hash the password
+        $password = md5($password);
+        $query = "SELECT * FROM users WHERE email='$email' AND password='$password'";
+        $results = mysqli_query($conn, $query);
+
+        // Use '==' for comparison
+        if (mysqli_num_rows($results) == 1) {
+            $_SESSION['email'] = $email;
+            $_SESSION['success'] = "You are now logged in";
+            header('location: ./admin/dashboard.php');
+
+        } else {
+            $errors[] =  "Wrong username/password combination";
+        }
+    }
+}
 ?>
