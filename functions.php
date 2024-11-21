@@ -24,14 +24,14 @@ if (isset($_POST['login_user'])) {
 
     // Initialize an array for error messages
     $errors = [];
-
     if (empty($email)) {
-        array_push($errors, "Email is required");
+        $errors[] = "Email is required.";
     }
 
     if (empty($password)) {
-        array_push($errors, "Password is required");
+        $errors[] = "Password is required.";
     }
+
 
     if (count($errors) == 0) {
         // Hash the password
@@ -46,7 +46,7 @@ if (isset($_POST['login_user'])) {
             header('location: ./admin/dashboard.php');
 
         } else {
-            array_push($errors, "Wrong username/password combination");
+            $errors[] =  "Wrong username/password combination";
         }
     }
 }

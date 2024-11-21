@@ -15,16 +15,27 @@ include('functions.php')
     <div class="d-flex align-items-center justify-content-center vh-100">
         <div class="col-3">
             <!-- Server-Side Validation Messages should be placed here -->
+            <?php if (!empty($errors)): ?>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <ul class="mb-0">
+                        <?php foreach ($errors as $error): ?>
+                            <li><?php echo htmlspecialchars($error); ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <?php endif; ?>
+
             <div class="card">
                 <div class="card-body">
                     <h1 class="h3 mb-4 fw-normal">Login</h1>
                     <form method="post" action="">
                         <div class="form-floating mb-3">
-                            <input type="email" class="form-control" id="email" name="email" placeholder="user1@example.com" required>
+                            <input type="email" class="form-control" id="email" name="email" placeholder="user1@example.com" value="<?php echo htmlspecialchars($email); ?>" required>
                             <label for="email">Email address</label>
                         </div>
                         <div class="form-floating mb-3">
-                            <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+                            <input type="password" class="form-control" id="password" name="password" placeholder="Password" value="<?php echo htmlspecialchars($password); ?>" required>
                             <label for="password">Password</label>
                         </div>
                         <div class="form-floating mb-3">
