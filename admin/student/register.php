@@ -2,20 +2,40 @@
 include('../../functions.php');
 include('../partials/header.php');
 
+// Initialize messages and variables
+$success_message = null;
+$error_message = null;
+$student_id = $first_name = $last_name = "";
+
 // Handle student addition
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_student'])) {
-    $student_id = $_POST['student_id'];
-    $first_name = $_POST['first_name'];
-    $last_name = $_POST['last_name'];
+    $student_id = trim($_POST['student_id']);
+    $first_name = trim($_POST['first_name']);
+    $last_name = trim($_POST['last_name']);
 
     if (!empty($student_id) && !empty($first_name) && !empty($last_name)) {
-        $query = "INSERT INTO students (student_id, first_name, last_name) VALUES (?, ?, ?)";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("sss", $student_id, $first_name, $last_name);
-        if ($stmt->execute()) {
-            $success_message = "Student added successfully.";
+        // Check if the student ID already exists
+        $check_query = "SELECT * FROM students WHERE student_id = ?";
+        $stmt = $conn->prepare($check_query);
+        $stmt->bind_param("s", $student_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows > 0) {
+            // Student ID already exists
+            $error_message = "Student ID already exists. Please use a unique ID.";
         } else {
-            $error_message = "Error adding student: " . $conn->error;
+            // Insert the new student
+            $query = "INSERT INTO students (student_id, first_name, last_name) VALUES (?, ?, ?)";
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param("sss", $student_id, $first_name, $last_name);
+            if ($stmt->execute()) {
+                $success_message = "Student added successfully.";
+                // Clear the form fields on success
+                $student_id = $first_name = $last_name = "";
+            } else {
+                $error_message = "Error adding student: " . $conn->error;
+            }
         }
     } else {
         $error_message = "All fields are required.";
@@ -61,24 +81,24 @@ if ($result) {
                 <!-- Registration Form -->
                 <div class="card mb-4">
                     <div class="card-body">
-                        <?php if (isset($success_message)) { ?>
+                        <?php if ($success_message) { ?>
                             <div class="alert alert-success"><?php echo $success_message; ?></div>
                         <?php } ?>
-                        <?php if (isset($error_message)) { ?>
+                        <?php if ($error_message) { ?>
                             <div class="alert alert-danger"><?php echo $error_message; ?></div>
                         <?php } ?>
                         <form method="POST" action="">
                             <div class="mb-3">
                                 <label for="student_id" class="form-label">Student ID</label>
-                                <input type="text" name="student_id" id="student_id" class="form-control" required>
+                                <input type="text" name="student_id" id="student_id" class="form-control" value="<?php echo htmlspecialchars($student_id); ?>" required>
                             </div>
                             <div class="mb-3">
                                 <label for="first_name" class="form-label">First Name</label>
-                                <input type="text" name="first_name" id="first_name" class="form-control" required>
+                                <input type="text" name="first_name" id="first_name" class="form-control" value="<?php echo htmlspecialchars($first_name); ?>" required>
                             </div>
                             <div class="mb-3">
                                 <label for="last_name" class="form-label">Last Name</label>
-                                <input type="text" name="last_name" id="last_name" class="form-control" required>
+                                <input type="text" name="last_name" id="last_name" class="form-control" value="<?php echo htmlspecialchars($last_name); ?>" required>
                             </div>
                             <button type="submit" name="add_student" class="btn btn-primary w-100">Add Student</button>
                         </form>

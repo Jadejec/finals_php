@@ -2,28 +2,37 @@
 include('../../functions.php'); 
 include('../partials/header.php'); 
 
-// Initialize messages
+// Initialize messages and form data variables
 $success_message = null;
 $error_message = null;
+$subject_code = $subject_name = "";
 
 // Handle subject addition
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_subject'])) {
-    $subject_code = $_POST['subject_code'];
-    $subject_name = $_POST['subject_name'];
+    $subject_code = trim($_POST['subject_code']);
+    $subject_name = trim($_POST['subject_name']);
 
     if (!empty($subject_code) && !empty($subject_name)) {
         // Check if the subject code already exists
-        $check_query = "SELECT * FROM subjects WHERE subject_code = '$subject_code'";
-        $check_result = $conn->query($check_query);
+        $check_query = "SELECT * FROM subjects WHERE subject_code = ?";
+        $stmt = $conn->prepare($check_query);
+        $stmt->bind_param("s", $subject_code);
+        $stmt->execute();
+        $result = $stmt->get_result();
 
-        if ($check_result->num_rows > 0) {
+        if ($result->num_rows > 0) {
             // Subject code already exists
             $error_message = "The subject code '$subject_code' already exists. Please use a unique subject code.";
         } else {
             // Insert the new subject
-            $query = "INSERT INTO subjects (subject_code, subject_name) VALUES ('$subject_code', '$subject_name')";
-            if ($conn->query($query)) {
+            $query = "INSERT INTO subjects (subject_code, subject_name) VALUES (?, ?)";
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param("ss", $subject_code, $subject_name);
+
+            if ($stmt->execute()) {
                 $success_message = "Subject added successfully.";
+                // Clear form fields after success
+                $subject_code = $subject_name = "";
             } else {
                 $error_message = "Error adding subject: " . $conn->error;
             }
@@ -56,7 +65,7 @@ if ($result) {
     <div class="container mt-5">
         <div class="row">
             <!-- Sidebar -->
-                <?php include('../partials/side-bar.php'); ?>
+            <?php include('../partials/side-bar.php'); ?>
             <!-- Main Content -->
             <div class="col-md-9 mx-auto">
                 <h1>Add a New Subject</h1>
@@ -64,7 +73,7 @@ if ($result) {
                 <!-- Breadcrumb -->
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb">
-                         <li class="breadcrumb-item"><a href="../dashboard.php">Dashboard</a></li>
+                        <li class="breadcrumb-item"><a href="../dashboard.php">Dashboard</a></li>
                         <li class="breadcrumb-item active" aria-current="page">Add Subject</li>
                     </ol>
                 </nav>
@@ -81,11 +90,11 @@ if ($result) {
                         <form method="POST" action="">
                             <div class="mb-3">
                                 <label for="subject_code" class="form-label">Subject Code</label>
-                                <input type="text" name="subject_code" id="subject_code" class="form-control" required>
+                                <input type="text" name="subject_code" id="subject_code" class="form-control" value="<?php echo htmlspecialchars($subject_code); ?>" required>
                             </div>
                             <div class="mb-3">
                                 <label for="subject_name" class="form-label">Subject Name</label>
-                                <input type="text" name="subject_name" id="subject_name" class="form-control" required>
+                                <input type="text" name="subject_name" id="subject_name" class="form-control" value="<?php echo htmlspecialchars($subject_name); ?>" required>
                             </div>
                             <button type="submit" name="add_subject" class="btn btn-primary w-100">Add Subject</button>
                         </form>
@@ -113,11 +122,7 @@ if ($result) {
                                             <td>
                                                 <a href="edit.php?id=<?php echo $subject['id']; ?>" class="btn btn-info btn-sm">Edit</a>
                                                 <a href="delete.php?id=<?php echo $subject['id']; ?>" class="btn btn-danger btn-sm">Delete</a>
-                                                <!-- Add Attach Subject button -->
-                                                <a href="../student/attach-subject.php?id=<?php echo $subject['id']; ?>" class="btn btn-success btn-sm">Attach Subject</a>
-
-
-
+                                                <a href="../student/attach-subject.php?id=<?php echo $subject['id']; ?>" class="btn btn-warning btn-sm">Attach Subject</a>
                                             </td>
                                         </tr>
                                     <?php } ?>
