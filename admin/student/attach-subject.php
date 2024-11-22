@@ -1,48 +1,63 @@
 <?php
-// Include necessary files and database connection
-include('../../functions.php'); // Adjust the path as needed
-session_start();
+include('../../functions.php');
+include('../partials/header.php');
+include('../partials/side-bar.php');
 
-// Handling form submission and registration
+$success_message = null;
+$error_message = null;
+$student_id = $_GET['student_id'] ?? null;
+
+if (!$student_id) {
+    die("Student ID is required.");
+}
+
+// Fetch student information
+$student_query = "SELECT * FROM students WHERE id = ?";
+$stmt = $conn->prepare($student_query);
+$stmt->bind_param("i", $student_id);
+$stmt->execute();
+$student = $stmt->get_result()->fetch_assoc();
+
+// Fetch all subjects
+$subjects_query = "SELECT * FROM subjects";
+$subjects = $conn->query($subjects_query)->fetch_all(MYSQLI_ASSOC);
+
+// Fetch attached subjects for the student
+$attached_query = "SELECT subject_id FROM students_subjects WHERE student_id = ?";
+$stmt = $conn->prepare($attached_query);
+$stmt->bind_param("i", $student_id);
+$stmt->execute();
+$attached_subjects = array_column($stmt->get_result()->fetch_all(MYSQLI_ASSOC), 'subject_id');
+
+// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Collect and sanitize input data
-    $studentId = $_POST['student_id'];
-    $firstName = $_POST['first_name'];
-    $lastName = $_POST['last_name'];
+    $selected_subjects = $_POST['subjects'] ?? [];
 
-    // Initialize errors array
-    $errors = [];
+    // Clear existing subject associations
+    $delete_query = "DELETE FROM students_subjects WHERE student_id = ?";
+    $stmt = $conn->prepare($delete_query);
+    $stmt->bind_param("i", $student_id);
+    $stmt->execute();
 
-    // Check if fields are empty
-    if (empty($studentId)) {
-        $errors[] = "Student ID is required.";
-    }
+    // Insert new associations
+    if (!empty($selected_subjects)) {
+        $insert_query = "INSERT INTO students_subjects (student_id, subject_id) VALUES (?, ?)";
+        $stmt = $conn->prepare($insert_query);
 
-    if (empty($firstName)) {
-        $errors[] = "First Name is required.";
-    }
-
-    if (empty($lastName)) {
-        $errors[] = "Last Name is required.";
-    }
-
-    // If no errors, insert into the database
-    if (empty($errors)) {
-        try {
-            $sql = "INSERT INTO students (student_id, first_name, last_name) VALUES (:student_id, :first_name, :last_name)";
-            $stmt = $pdo->prepare($sql);
-            $stmt->bindParam(':student_id', $studentId);
-            $stmt->bindParam(':first_name', $firstName);
-            $stmt->bindParam(':last_name', $lastName);
+        foreach ($selected_subjects as $subject_id) {
+            $stmt->bind_param("ii", $student_id, $subject_id);
             $stmt->execute();
-
-            $_SESSION['success'] = "Student registered successfully!";
-            header('Location: students.php'); // Redirect to the list of students or another page
-            exit;
-        } catch (PDOException $e) {
-            $errors[] = "Error occurred while registering student: " . $e->getMessage();
         }
     }
+
+    // Refresh the attached subjects after update
+    $attached_query = "SELECT subject_id FROM students_subjects WHERE student_id = ?";
+    $stmt = $conn->prepare($attached_query);
+    $stmt->bind_param("i", $student_id);
+    $stmt->execute();
+    $attached_subjects = array_column($stmt->get_result()->fetch_all(MYSQLI_ASSOC), 'subject_id');
+
+    $success_message = "Subjects updated successfully!";
 }
 ?>
 
@@ -51,40 +66,113 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register a New Student</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Attach Subjects</title>
+    <style>
+        .center-content {
+            margin-left: 250px; /* Space for the sidebar */
+        }
+    </style>
 </head>
-<body>
-    <div class="container my-5">
-        <h1>Register a New Student</h1>
+<body class="bg-light">
+    <div class="container mt-5 center-content">
+        <h1 class="mb-4">Attach Subject to Student</h1>
 
-        <!-- Display error messages if any -->
-        <?php if (!empty($errors)): ?>
-            <div class="alert alert-danger">
-                <ul>
-                    <?php foreach ($errors as $error): ?>
-                        <li><?php echo htmlspecialchars($error); ?></li>
-                    <?php endforeach; ?>
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="../dashboard.php">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="students.php">Register Student</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Attach Subject</li>
+            </ol>
+        </nav>
+
+        <!-- Student Information -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5>Selected Student Information</h5>
+                <ul class="list-unstyled">
+                    <li><strong>Student ID:</strong> <?php echo htmlspecialchars($student['id']); ?></li>
+                    <li><strong>Name:</strong> <?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?></li>
                 </ul>
             </div>
-        <?php endif; ?>
+        </div>
 
-        <form method="post">
-            <div class="form-group">
-                <label for="studentId">Student ID:</label>
-                <input type="text" class="form-control" id="studentId" name="student_id" required value="<?php echo isset($studentId) ? htmlspecialchars($studentId) : ''; ?>">
+        <!-- Success/Error Messages -->
+        <?php if ($success_message) { ?>
+            <div class="alert alert-success"><?php echo $success_message; ?></div>
+        <?php } ?>
+        <?php if ($error_message) { ?>
+            <div class="alert alert-danger"><?php echo $error_message; ?></div>
+        <?php } ?>
+
+        <!-- Subject Selection Form -->
+        <form method="POST" action="">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Available Subjects</h5>
+                    <?php foreach ($subjects as $subject) { ?>
+                        <div class="form-check">
+                            <input 
+                                type="checkbox" 
+                                name="subjects[]" 
+                                value="<?php echo $subject['id']; ?>" 
+                                class="form-check-input" 
+                                id="subject-<?php echo $subject['id']; ?>"
+                                <?php echo in_array($subject['id'], $attached_subjects) ? 'checked' : ''; ?>>
+                            <label class="form-check-label" for="subject-<?php echo $subject['id']; ?>">
+                                <?php echo htmlspecialchars($subject['subject_name']); ?>
+                            </label>
+                        </div>
+                    <?php } ?>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="firstName">First Name:</label>
-                <input type="text" class="form-control" id="firstName" name="first_name" required value="<?php echo isset($firstName) ? htmlspecialchars($firstName) : ''; ?>">
-            </div>
-            <div class="form-group">
-                <label for="lastName">Last Name:</label>
-                <input type="text" class="form-control" id="lastName" name="last_name" required value="<?php echo isset($lastName) ? htmlspecialchars($lastName) : ''; ?>">
-            </div>
-            <button type="submit" class="btn btn-primary">Add Student</button>
-            <a href="students.php" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary w-100">Attach Subjects</button>
         </form>
+
+        <!-- Subject List -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5 class="card-title">Subject List</h5>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Subject Code</th>
+                            <th>Subject Name</th>
+                            <th>Grade</th>
+                            <th>Option</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (!empty($attached_subjects)) { ?>
+                            <?php
+                            foreach ($attached_subjects as $subject_id) {
+                                // Fetch subject details
+                                $subject_query = "SELECT * FROM subjects WHERE id = ?";
+                                $stmt = $conn->prepare($subject_query);
+                                $stmt->bind_param("i", $subject_id);
+                                $stmt->execute();
+                                $subject = $stmt->get_result()->fetch_assoc();
+                            ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($subject['id']); ?></td>
+                                    <td><?php echo htmlspecialchars($subject['subject_name']); ?></td>
+                                    <td>-</td> <!-- Placeholder for grade -->
+                                    <td>
+                                        <a href="detach.php?student_id=<?php echo $student_id; ?>&subject_id=<?php echo $subject_id; ?>" class="btn btn-danger btn-sm">Detach</a>
+                                    </td>
+                                </tr>
+                            <?php } ?>
+                        <?php } else { ?>
+                            <tr>
+                                <td colspan="4" class="text-center">No subjects found.</td>
+                            </tr>
+                        <?php } ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
+    <?php include('../partials/footer.php'); ?>
 </body>
 </html>
